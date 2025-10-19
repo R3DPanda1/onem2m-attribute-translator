@@ -123,11 +123,29 @@
         <div class="panels">
             <div class="panel">
                 <div class="panel-label" id="labelInput">Input (abbreviated)</div>
-                <textarea id="input" placeholder="Paste your OneM2M text here..."></textarea>
+                <textarea id="input" placeholder='Example:
+{
+  "m2m:cnt": {
+    "rn": "myContainer",
+    "ty": 3,
+    "ri": "cnt123",
+    "ct": "20231015T120000",
+    "lt": "20231015T120000"
+  }
+}'></textarea>
             </div>
             <div class="panel">
                 <div class="panel-label" id="labelOutput">Output (full names)</div>
-                <textarea id="output" readonly placeholder="Translated output appears here..."></textarea>
+                <textarea id="output" readonly placeholder='Example output:
+{
+  "m2m:cnt": {
+    "resourceName": "myContainer",
+    "resourceType": 3,
+    "resourceID": "cnt123",
+    "creationTime": "20231015T120000",
+    "lastModifiedTime": "20231015T120000"
+  }
+}'></textarea>
             </div>
         </div>
     </div>
@@ -371,12 +389,55 @@
             document.getElementById('btnShortToLong').classList.toggle('active', direction === 'shortToLong');
             document.getElementById('btnLongToShort').classList.toggle('active', direction === 'longToShort');
             
+            const inputField = document.getElementById('input');
+            const outputField = document.getElementById('output');
+            
             if (direction === 'shortToLong') {
                 document.getElementById('labelInput').textContent = 'Input (abbreviated)';
                 document.getElementById('labelOutput').textContent = 'Output (full names)';
+                inputField.placeholder = `Example:
+{
+  "m2m:cnt": {
+    "rn": "myContainer",
+    "ty": 3,
+    "ri": "cnt123",
+    "ct": "20231015T120000",
+    "lt": "20231015T120000"
+  }
+}`;
+                outputField.placeholder = `Example output:
+{
+  "m2m:cnt": {
+    "resourceName": "myContainer",
+    "resourceType": 3,
+    "resourceID": "cnt123",
+    "creationTime": "20231015T120000",
+    "lastModifiedTime": "20231015T120000"
+  }
+}`;
             } else {
                 document.getElementById('labelInput').textContent = 'Input (full names)';
                 document.getElementById('labelOutput').textContent = 'Output (abbreviated)';
+                inputField.placeholder = `Example:
+{
+  "m2m:cnt": {
+    "resourceName": "myContainer",
+    "resourceType": 3,
+    "resourceID": "cnt123",
+    "creationTime": "20231015T120000",
+    "lastModifiedTime": "20231015T120000"
+  }
+}`;
+                outputField.placeholder = `Example output:
+{
+  "m2m:cnt": {
+    "rn": "myContainer",
+    "ty": 3,
+    "ri": "cnt123",
+    "ct": "20231015T120000",
+    "lt": "20231015T120000"
+  }
+}`;
             }
             
             translate();
