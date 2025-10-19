@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneM2M Translator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .direction-toggle {
+            display: inline-flex;
+            background: white;
+            border-radius: 6px;
+            padding: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .direction-toggle button {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+            color: #666;
+        }
+
+        .direction-toggle button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        textarea {
+            width: 100%;
+            height: calc(100vh - 180px);
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: none;
+            background: white;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #999;
+        }
+
+        #output {
+            background: #fafafa;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .panels {
+                grid-template-columns: 1fr;
+            }
+            
+            textarea {
+                height: 40vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>OneM2M Attribute Translator</h1>
+            <div class="direction-toggle">
+                <button id="btnShortToLong" class="active" onclick="setDirection('shortToLong')">Short → Long</button>
+                <button id="btnLongToShort" onclick="setDirection('longToShort')">Long → Short</button>
+            </div>
+        </header>
+        
+        <div class="panels">
+            <div class="panel">
+                <div class="panel-label" id="labelInput">Input (abbreviated)</div>
+                <textarea id="input" placeholder="Paste your OneM2M text here..."></textarea>
+            </div>
+            <div class="panel">
+                <div class="panel-label" id="labelOutput">Output (full names)</div>
+                <textarea id="output" readonly placeholder="Translated output appears here..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const shortNames = {
+            "aa": { "ln": "announcedAttribute", "type": "common" },
+            "acn": { "ln": "action", "type": "" },
+            "act": { "ln": "activate", "type": "" },
+            "acts": { "ln": "activeStatus", "type": "" },
+            "acpi": { "ln": "accessControlPolicyIDs", "type": "common" },
+            "aei": { "ln": "AE-ID", "type": "" },
+            "altie": { "ln": "altitude", "type": "custom" },
+            "ant": { "ln": "areaNwkType", "type": "custom" },
+            "ape": { "ln": "activityPatternElements", "type": "" },
+            "api": { "ln": "App-ID", "type": "" },
+            "apn": { "ln": "AppName", "type": "" },
+            "apv": { "ln": "actionPrimitive", "type": "" },
+            "at": { "ln": "announcedTo", "type": "common" },
+            "att": { "ln": "attached", "type": "custom" },
+            "awi": { "ln": "areaNwkId", "type": "custom" },
+            "batTd": { "ln": "batteryThreshold", "type": "custom" },
+            "btl": { "ln": "batteryLevel", "type": "custom" },
+            "bts": { "ln": "batteryStatus", "type": "custom" },
+            "can": { "ln": "capabilityName", "type": "custom" },
+            "capay": { "ln": "capacity", "type": "custom" },
+            "cb": { "ln": "CSEBase", "type": "" },
+            "charg": { "ln": "charging", "type": "custom" },
+            "cas": { "ln": "capabilityActionStatus", "type": "custom" },
+            "cbs": { "ln": "currentByteSize", "type": "" },
+            "cCTEs": { "ln": "currentCycleTransmissionErrors", "type": "custom" },
+            "celID": { "ln": "cellID", "type": "custom" },
+            "cnd": { "ln": "containerDefinition", "type": "" },
+            "cnf": { "ln": "contentInfo", "type": "custom" },
+            "cni": { "ln": "currentNrOfInstances", "type": "" },
+            "cnm": { "ln": "currentNrOfMembers", "type": "" },
+            "cnty": { "ln": "country", "type": "custom" },
+            "coFVe": { "ln": "commFreqValue", "type": "custom" },
+            "con": { "ln": "content", "type": "" },
+            "cr": { "ln": "creator", "type": "common" },
+            "cs": { "ln": "contentSize", "type": "" },
+            "csi": { "ln": "CSE-ID", "type": "" },
+            "cst": { "ln": "cseType", "type": "" },
+            "csy": { "ln": "consistencyStrategy", "type": "" },
+            "csz": { "ln": "contentSerialization", "type": "" },
+            "ct": { "ln": "creationTime", "type": "universal" },
+            "ctm": { "ln": "currentTime", "type": "" },
+            "cuCBn": { "ln": "currentCycleBeginn", "type": "custom" },
+            "cuCVe": { "ln": "currentCycleVolume", "type": "custom" },
+            "cus": { "ln": "currentState", "type": "custom" },
+            "daci": { "ln": "dynamicAuthorizationConsultationIDs", "type": "common" },
+            "daATe": { "ln": "dailyActivityTime", "type": "custom" },
+            "dc": { "ln": "description", "type": "" },
+            "dcrp": { "ln": "descriptorRepresentation", "type": "" },
+            "dea": { "ln": "deactivate", "type": "" },
+            "defVe": { "ln": "defaultValue", "type": "custom" },
+            "dgt": { "ln": "dataGenerationTime", "type": "" },
+            "dis": { "ln": "disable", "type": "" },
+            "discg": { "ln": "discharging", "type": "custom" },
+            "disr": { "ln": "disableRetrieval", "type": "" },
+            "dlb": { "ln": "deviceLabel", "type": "custom" },
+            "dNOCs": { "ln": "dailyNumberOfConnections", "type": "custom" },
+            "dcse": { "ln": "descendantCSEs", "type": "" },
+            "dsp": { "ln": "descriptor", "type": "" },
+            "dty": { "ln": "deviceType", "type": "custom" },
+            "dvd": { "ln": "devId", "type": "custom" },
+            "dvi": { "ln": "deviceInfo", "type": "" },
+            "dvnm": { "ln": "deviceName", "type": "custom" },
+            "dvt": { "ln": "devType", "type": "custom" },
+            "egid": { "ln": "externalGroupID", "type": "" },
+            "eleEy": { "ln": "electricEnergy", "type": "custom" },
+            "ena": { "ln": "enable", "type": "" },
+            "enc": { "ln": "eventNotificationCriteria", "type": "" },
+            "esi": { "ln": "e2eSecInfo", "type": "common" },
+            "et": { "ln": "expirationTime", "type": "common" },
+            "evc": { "ln": "evalCriteria", "type": "" },
+            "evm": { "ln": "evalMode", "type": "" },
+            "far": { "ln": "factoryReset", "type": "" },
+            "fwn": { "ln": "firmwareName", "type": "custom" },
+            "fwv": { "ln": "fwVersion", "type": "custom" },
+            "gn": { "ln": "groupName", "type": "" },
+            "hael": { "ln": "hostedAELinks", "type": "" },
+            "hash": { "ln": "hash", "type": "custom" },
+            "hcl": { "ln": "hostedCSELink", "type": "" },
+            "heaAy": { "ln": "headingAccuracy", "type": "custom" },
+            "headg": { "ln": "heading", "type": "custom" },
+            "horAy": { "ln": "horizontalAccuracy", "type": "custom" },
+            "hsl": { "ln": "hostedServiceLink", "type": "" },
+            "hwv": { "ln": "hwVersion", "type": "custom" },
+            "in": { "ln": "install", "type": "" },
+            "ins": { "ln": "installStatus", "type": "" },
+            "latie": { "ln": "latitude", "type": "custom" },
+            "lbl": { "ln": "labels", "type": "common" },
+            "ldv": { "ln": "listOfDevices", "type": "custom" },
+            "lga": { "ln": "logStart", "type": "custom" },
+            "lgd": { "ln": "logData", "type": "custom" },
+            "lgo": { "ln": "logStop", "type": "custom" },
+            "lgst": { "ln": "logStatus", "type": "custom" },
+            "lgt": { "ln": "logTypeId", "type": "custom" },
+            "li": { "ln": "locationID", "type": "" },
+            "lnh": { "ln": "listOfNeighbors", "type": "custom" },
+            "lnk": { "ln": "link", "type": "custom" },
+            "loc": { "ln": "location", "type": "custom" },
+            "logNe": { "ln": "loginName", "type": "custom" },
+            "longe": { "ln": "longitude", "type": "custom" },
+            "lt": { "ln": "lastModifiedTime", "type": "universal" },
+            "lvl": { "ln": "level", "type": "custom" },
+            "macp": { "ln": "membersAccessControlPolicyIDs", "type": "" },
+            "man": { "ln": "manufacturer", "type": "custom" },
+            "matel": { "ln": "material", "type": "custom" },
+            "maxLh": { "ln": "maxLength", "type": "custom" },
+            "mbs": { "ln": "maxByteSize", "type": "" },
+            "mcfc": { "ln": "myCertFileContent", "type": "custom" },
+            "mcff": { "ln": "myCertFileFormat", "type": "custom" },
+            "mdc": { "ln": "missingDataCurrentNr", "type": "" },
+            "mdd": { "ln": "missingDataDetect", "type": "" },
+            "mdn": { "ln": "missingDataMaxNr", "type": "" },
+            "mdt": { "ln": "missingDataDetectTimer", "type": "" },
+            "mei": { "ln": "M2M-Ext-ID", "type": "" },
+            "mesEg": { "ln": "messageEncoding", "type": "custom" },
+            "mfd": { "ln": "manufacturingDate", "type": "custom" },
+            "mfdl": { "ln": "manufacturerDetailsLink", "type": "custom" },
+            "mgca": { "ln": "mgmtClientAddress", "type": "" },
+            "mgd": { "ln": "mgmtDefinition", "type": "" },
+            "mi": { "ln": "metaInformation", "type": "" },
+            "miCLy": { "ln": "minimumCommunicationLatency", "type": "custom" },
+            "mid": { "ln": "memberIDs", "type": "" },
+            "minLh": { "ln": "minLength", "type": "custom" },
+            "mma": { "ln": "memAvailable", "type": "custom" },
+            "mmt": { "ln": "memTotal", "type": "custom" },
+            "mni": { "ln": "maxNrOfInstances", "type": "" },
+            "mnm": { "ln": "maxNrOfMembers", "type": "" },
+            "mod": { "ln": "model", "type": "custom" },
+            "mt": { "ln": "memberType", "type": "" },
+            "mtv": { "ln": "memberTypeValidated", "type": "" },
+            "nar": { "ln": "notifyAggregation", "type": "" },
+            "nct": { "ln": "notificationContentType", "type": "" },
+            "ni": { "ln": "nodeID", "type": "" },
+            "nid": { "ln": "networkID", "type": "" },
+            "nl": { "ln": "nodeLink", "type": "" },
+            "nu": { "ln": "notificationURI", "type": "" },
+            "objet": { "ln": "object", "type": "custom" },
+            "objTe": { "ln": "objectType", "type": "custom" },
+            "op": { "ln": "operation", "type": "" },
+            "or": { "ln": "ontologyRef", "type": "" },
+            "orc": { "ln": "objectResourceID", "type": "" },
+            "osv": { "ln": "osVersion", "type": "custom" },
+            "pci": { "ln": "pci", "type": "custom" },
+            "pei": { "ln": "periodicInterval", "type": "" },
+            "peid": { "ln": "periodicIntervalDelta", "type": "" },
+            "pi": { "ln": "parentID", "type": "universal" },
+            "poa": { "ln": "pointOfAccess", "type": "" },
+            "ptl": { "ln": "protocol", "type": "custom" },
+            "purl": { "ln": "presentationURL", "type": "custom" },
+            "pushd": { "ln": "pushed", "type": "custom" },
+            "pv": { "ln": "privileges", "type": "" },
+            "pvs": { "ln": "selfPrivileges", "type": "" },
+            "pwd": { "ln": "password", "type": "custom" },
+            "rbo": { "ln": "reboot", "type": "" },
+            "regs": { "ln": "registrationStatus", "type": "" },
+            "ri": { "ln": "resourceID", "type": "universal" },
+            "rid": { "ln": "requestID", "type": "" },
+            "rms": { "ln": "roamingStatus", "type": "" },
+            "rn": { "ln": "resourceName", "type": "universal" },
+            "rqag": { "ln": "requestAggregation", "type": "" },
+            "rr": { "ln": "requestReachability", "type": "" },
+            "rs": { "ln": "requestStatus", "type": "" },
+            "rsrp": { "ln": "rsrp", "type": "custom" },
+            "rsrq": { "ln": "rsrq", "type": "custom" },
+            "rssi": { "ln": "rssi", "type": "custom" },
+            "scp": { "ln": "sessionCapabilities", "type": "" },
+            "siECL": { "ln": "signalECL", "type": "custom" },
+            "sinr": { "ln": "sinr", "type": "custom" },
+            "size": { "ln": "size", "type": "custom" },
+            "sld": { "ln": "sleepDuration", "type": "custom" },
+            "sli": { "ln": "sleepInterval", "type": "custom" },
+            "smod": { "ln": "subModel", "type": "custom" },
+            "snr": { "ln": "sequenceNr", "type": "" },
+            "spty": { "ln": "specializationType", "type": "" },
+            "spur": { "ln": "supportURL", "type": "custom" },
+            "sri": { "ln": "subjectResourceID", "type": "" },
+            "srt": { "ln": "supportedResourceType", "type": "" },
+            "srv": { "ln": "supportedReleaseVersions", "type": "" },
+            "ssi": { "ln": "semanticSupportIndicator", "type": "" },
+            "st": { "ln": "stateTag", "type": "common" },
+            "suids": { "ln": "SUIDs", "type": "custom" },
+            "suMVs": { "ln": "supportedMessageValues", "type": "custom" },
+            "sus": { "ln": "status", "type": "" },
+            "swn": { "ln": "softwareName", "type": "" },
+            "swr": { "ln": "software", "type": "" },
+            "svd": { "ln": "semanticValidated", "type": "" },
+            "swv": { "ln": "swVersion", "type": "custom" },
+            "syst": { "ln": "systemTime", "type": "custom" },
+            "tarAe": { "ln": "targetAltitude", "type": "custom" },
+            "tarLe": { "ln": "targetLatitude", "type": "custom" },
+            "tarL0": { "ln": "targetLongitude", "type": "custom" },
+            "texMe": { "ln": "textMessage", "type": "custom" },
+            "tg": { "ln": "target", "type": "" },
+            "tk": { "ln": "token", "type": "custom" },
+            "tri": { "ln": "trigger-Recipient-ID", "type": "" },
+            "tren": { "ln": "triggerEnable", "type": "" },
+            "trn": { "ln": "triggerReferenceNumber", "type": "" },
+            "trps": { "ln": "trackRegistrationPoints", "type": "" },
+            "ty": { "ln": "resourceType", "type": "universal" },
+            "ud": { "ln": "update", "type": "custom" },
+            "uds": { "ln": "updateStatus", "type": "custom" },
+            "un": { "ln": "uninstall", "type": "" },
+            "url": { "ln": "URL", "type": "custom" },
+            "verAy": { "ln": "verticalAccuracy", "type": "custom" },
+            "vlde": { "ln": "validationEnable", "type": "" },
+            "volte": { "ln": "voltage", "type": "custom" },
+            "vr": { "ln": "version", "type": "custom" },
+            "crRes": { "ln": "createdResources", "type": "custom" },
+            "cseSU": { "ln": "cseStartUpTime", "type": "custom" },
+            "cseUT": { "ln": "cseUptime", "type": "custom" },
+            "ctRes": { "ln": "resourceCount", "type": "custom" },
+            "htCre": { "ln": "httpCreates", "type": "custom" },
+            "htDel": { "ln": "httpDeletes", "type": "custom" },
+            "htRet": { "ln": "httpRetrieves", "type": "custom" },
+            "htUpd": { "ln": "httpUpdates", "type": "custom" },
+            "lgErr": { "ln": "logErrors", "type": "custom" },
+            "lgWrn": { "ln": "logWarnings", "type": "custom" },
+            "rmRes": { "ln": "deletedResources", "type": "custom" },
+            "upRes": { "ln": "updatedResources", "type": "custom" }
+        };
+
+        // Create reverse mapping (long to short)
+        const longToShort = {};
+        Object.keys(shortNames).forEach(short => {
+            longToShort[shortNames[short].ln] = short;
+        });
+
+        const sortedShortKeys = Object.keys(shortNames).sort((a, b) => b.length - a.length);
+        const sortedLongKeys = Object.keys(longToShort).sort((a, b) => b.length - a.length);
+
+        let currentDirection = 'shortToLong';
+
+        function setDirection(direction) {
+            currentDirection = direction;
+            
+            document.getElementById('btnShortToLong').classList.toggle('active', direction === 'shortToLong');
+            document.getElementById('btnLongToShort').classList.toggle('active', direction === 'longToShort');
+            
+            if (direction === 'shortToLong') {
+                document.getElementById('labelInput').textContent = 'Input (abbreviated)';
+                document.getElementById('labelOutput').textContent = 'Output (full names)';
+            } else {
+                document.getElementById('labelInput').textContent = 'Input (full names)';
+                document.getElementById('labelOutput').textContent = 'Output (abbreviated)';
+            }
+            
+            translate();
+        }
+
+        function translate() {
+            const input = document.getElementById('input').value;
+            let output = input;
+
+            if (currentDirection === 'shortToLong') {
+                sortedShortKeys.forEach(shortName => {
+                    const longName = shortNames[shortName].ln;
+                    const regex = new RegExp(`(["'])(${shortName})\\1`, 'g');
+                    output = output.replace(regex, (match, quote) => {
+                        return `${quote}${longName}${quote}`;
+                    });
+                });
+            } else {
+                sortedLongKeys.forEach(longName => {
+                    const shortName = longToShort[longName];
+                    const regex = new RegExp(`(["'])(${longName})\\1`, 'g');
+                    output = output.replace(regex, (match, quote) => {
+                        return `${quote}${shortName}${quote}`;
+                    });
+                });
+            }
+
+            document.getElementById('output').value = output;
+        }
+
+        let debounceTimer;
+        document.getElementById('input').addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(translate, 300);
+        });
+    </script>
+</body>
+</html>
